@@ -1,0 +1,83 @@
+---
+title: "competicao"
+author: "Maxwel Coura Oliveira"
+date: "5/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(googlesheets4)
+library(drc)
+library(lubridate)
+```
+
+
+```{r}
+#gs4_auth(email = "maxwelco@gmail.com")
+comp <- read_sheet("https://docs.google.com/spreadsheets/d/17E086oWhogy9mERBDz_586XWOmHtkW65yjDyZ7fo0M4/edit#gid=0")
+```
+
+```{r}
+comp %>% 
+  janitor::clean_names() %>% 
+  mutate_if(is_character, as_factor) %>% 
+  mutate(tempo_data = lubridate::ymd(tempo_data)) -> comp1
+```
+
+```{r}
+comp1 %>% 
+  mutate(tempo_dias = yday(tempo_data) + 11)  %>% 
+  mutate(tempo_dias = if_else(tempo_dias == 366, 0, tempo_dias)) -> comp2
+```
+
+
+```{r}
+comp2 %>% 
+  ggplot(aes(x = tempo, y = kg_ha, fill = herbicida)) +
+  geom_boxplot(position = "dodge")
+```
+
+
+```{r}
+comp2 %>% 
+   ggplot(aes(x = tempo_dias, y = kg_ha, color = herbicida)) +
+  geom_point()
+```
+
+
+
+```{r}
+model <- drm(kg_ha ~ tempo_dias, herbicida, 
+             fct = l3(fixed = c(NA, NA, NA)), data = comp2)
+```
+
+```{r}
+plot(model, col = c(1,2), pch = 1,  log = "", type = "average", 
+     xlim = c(0, 140), ylim = c(0, 4000))
+```
+
+```{r}
+summary(model)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
