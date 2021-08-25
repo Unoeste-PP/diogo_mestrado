@@ -14,19 +14,20 @@ library(tidyverse)
 library(googlesheets4)
 library(drc)
 library(lubridate)
+library(ggthemes)
 ```
 
 
 ```{r}
-#gs4_auth(email = "maxwelco@gmail.com")
-comp <- read_sheet("https://docs.google.com/spreadsheets/d/17E086oWhogy9mERBDz_586XWOmHtkW65yjDyZ7fo0M4/edit#gid=0")
+comp <- read_csv("data/produtividade.csv")
 ```
 
 ```{r}
 comp %>% 
   janitor::clean_names() %>% 
-  mutate_if(is_character, as_factor) %>% 
-  mutate(tempo_data = lubridate::ymd(tempo_data)) -> comp1
+  mutate(kg_ha = kg_ha / 100) %>% 
+  mutate_at(c("herbicida", "estagio"), as_factor) %>%
+  mutate(tempo_data = dmy(tempo_data)) -> comp1
 ```
 
 ```{r}
@@ -35,10 +36,9 @@ comp1 %>%
   mutate(tempo_dias = if_else(tempo_dias == 366, 0, tempo_dias)) -> comp2
 ```
 
-
 ```{r}
 comp2 %>% 
-  ggplot(aes(x = tempo, y = kg_ha, fill = herbicida)) +
+  ggplot(aes(x = estagio, y = kg_ha, fill = herbicida)) +
   geom_boxplot(position = "dodge")
 ```
 
@@ -46,19 +46,28 @@ comp2 %>%
 ```{r}
 comp2 %>% 
    ggplot(aes(x = tempo_dias, y = kg_ha, color = herbicida)) +
-  geom_point()
+  geom_jitter()
 ```
+
 
 
 
 ```{r}
 model <- drm(kg_ha ~ tempo_dias, herbicida, 
-             fct = l3(fixed = c(NA, NA, NA)), data = comp2)
+             fct = W1.3(), data = comp2)
+
+
+model1 <- drm(kg_ha ~ tempo_dias, 
+             fct = W1.3(), data = comp2)
+
+anova(model, model1)
 ```
 
+
+
 ```{r}
-plot(model, col = c(1,2), pch = 1,  log = "", type = "average", 
-     xlim = c(0, 140), ylim = c(0, 4000))
+plot(model, col = c(1,2), pch = c(1,16),  log = "", type = "all", 
+     xlim = c(0, 140), ylim = c(0, 4500))
 ```
 
 ```{r}
@@ -66,14 +75,62 @@ summary(model)
 ```
 
 
+```{r}
+ED(model, c(10, 50, 90), interval = "delta", type = "relative")
+```
 
 
 
+```{r control-prediction, include=FALSE}
+newdata <- expand.grid(tempo_dias = seq(0, 135, by = 1))
+newdata1 <- data.frame(herbicida = "pre", newdata)
+newdata2 <- data.frame(herbicida = "sem", newdata)
+
+nd = rbind(newdata1, newdata2)
+
+pm <- predict(model, newdata=nd, interval="confidence")
+
+nd$p <- pm[,1] 
+nd$pmin <- pm[,2] 
+nd$pmax <- pm[,3] 
+comp2$tempo_dias0 <- comp2$tempo_dias
+comp2$tempo_dias0[comp2$tempo_dias0==0] <- 0.5
+```
 
 
 
+```{r}
+comp2 %>% 
+ggplot(aes(x = tempo_dias, y = kg_ha, 
+           color = herbicida)) + 
+#  coord_trans(x= "log") +
+  geom_jitter(data = comp2, aes(x = tempo_dias, y = kg_ha, color = herbicida),
+              alpha = 0.1) +
+  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 140, 20)) +
+  scale_y_continuous(limits = c(0, 4500)) +
+  geom_line(data = nd, aes(x = tempo_dias, y = p, color = herbicida), size = 1.2) +
+  labs(y = expression(paste("Produtividade (kg ha"^"-1",")")), 
+       x = "Dias após o plantio", color = NULL) +
+  theme_few() +
+  theme(legend.position = c(0.1, 0.1))
 
+ggsave("prod.png")
+```
 
+```{r}
+nd %>% 
+  filter(tempo_dias == 100) %>% 
+  ggplot(aes(x = herbicida, y = p, 
+           color = herbicida)) +
+  geom_point() +
+  geom_linerange(aes(ymin = pmin, ymax = pmax)) +
+  coord_flip() +
+  labs(y = expression(paste("Produtividade (kg ha"^"-1",")")), 
+       x = "Herbicida", color = NULL) +
+  theme_few() +
+  theme(legend.position = c(0.1, 0.1),
+        legend.direction = "horizontal")
+```
 
 
 
