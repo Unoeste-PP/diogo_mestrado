@@ -5,13 +5,13 @@ date: "5/26/2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r}
+#install.packages("tidyverse")
 ```
+
 
 ```{r}
 library(tidyverse)
-library(googlesheets4)
 library(drc)
 library(lubridate)
 library(ggthemes)
@@ -39,7 +39,7 @@ comp1 %>%
 ```{r}
 comp2 %>% 
   ggplot(aes(x = estagio, y = kg_ha, fill = herbicida)) +
-  geom_boxplot(position = "dodge")
+  geom_boxplot(position = "dodge", width = 0.5)
 ```
 
 
@@ -51,16 +51,24 @@ comp2 %>%
 
 
 
-
 ```{r}
 model <- drm(kg_ha ~ tempo_dias, herbicida, 
              fct = W1.3(), data = comp2)
 
+plot(model)
+```
 
+
+```{r}
 model1 <- drm(kg_ha ~ tempo_dias, 
              fct = W1.3(), data = comp2)
 
-anova(model, model1)
+plot(model1)
+```
+
+
+```{r}
+anova(model, model1) # p-value = 0.000
 ```
 
 
@@ -117,9 +125,11 @@ ggplot(aes(x = tempo_dias, y = kg_ha,
 ggsave("prod.png")
 ```
 
+
+
 ```{r}
 nd %>% 
-  filter(tempo_dias == 100) %>% 
+  filter(tempo_dias == 30) %>% 
   ggplot(aes(x = herbicida, y = p, 
            color = herbicida)) +
   geom_point() +

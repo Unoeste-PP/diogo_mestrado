@@ -1,0 +1,85 @@
+---
+title: "pre_emergente"
+author: "Maxwel Coura Oliveira"
+date: "8/26/2021"
+output: html_document
+---
+
+
+
+```{r}
+#install.packages("tidyverse")
+```
+
+
+```{r}
+library(tidyverse)
+library(glmmTMB)
+library(emmeans)
+library(lubridate)
+library(ggthemes)
+library(multcomp)
+```
+
+# Controle
+
+
+```{r}
+pre <- read_csv("data/pre_emergente.csv")
+```
+
+
+```{r}
+pre %>% 
+  janitor::clean_names() %>% 
+  mutate(herbicidas = str_to_title(herbicidas)) %>% 
+  dplyr::select(herbicidas, repeticao, plot_3, data_4, nota) %>% 
+  filter(nota != "x") %>% 
+  mutate(nota = as.double(nota)) %>% 
+  mutate(data_4 = dmy(data_4)) %>% 
+  mutate(controle = if_else(nota == 100, 99, nota)) %>% 
+  mutate(controle = controle / 100) %>% 
+  mutate_if(is_character, as_factor) -> pre1
+```
+
+
+```{r}
+pre1 %>% 
+  filter(data_4 == "2021-02-09") -> pre_21
+```
+
+
+```{r}
+modelo_pre <- glmmTMB(controle ~ herbicidas + (1|repeticao),
+                      family = beta_family(),
+                      data = pre_21)
+```
+
+
+```{r}
+car::Anova(modelo_pre)
+```
+
+```{r}
+emmeans(modelo_pre, ~ herbicidas, type = "response") -> pre_em_21
+```
+
+
+```{r}
+cld(pre_em_21, alpha=0.05, Letters=letters, adjust="none", reversed = TRUE)
+```
+                              Controle                       Biomassa (g)    Densidade (m2)
+                     14 dias            28 DAT       50          50 DAT
+herbicida      controle    IC      controle   IC   controle   IC
+Clomazone         67 a  (54-69)       55 b    
+S-Metolachlor     55 b
+Pedimentalina
+
+
+
+
+
+
+
+
+
