@@ -6,11 +6,16 @@ output: html_document
 ---
 
 ```{r}
+# tire o # e clique na seta verde para instalar os pacotes
 #install.packages("tidyverse")
+#install.packages(drc)
+#install.packages(lubridate)
+#install.packages(ggthemes)
 ```
 
 
 ```{r}
+# importar os pacotes
 library(tidyverse)
 library(drc)
 library(lubridate)
@@ -19,10 +24,12 @@ library(ggthemes)
 
 
 ```{r}
+# importar os dados de produtividade
 comp <- read_csv("data/produtividade.csv")
 ```
 
 ```{r}
+# manipular os dados
 comp %>% 
   janitor::clean_names() %>% 
   mutate(kg_ha = kg_ha / 100) %>% 
@@ -31,12 +38,14 @@ comp %>%
 ```
 
 ```{r}
+# manipular os dados
 comp1 %>% 
   mutate(tempo_dias = yday(tempo_data) + 11)  %>% 
   mutate(tempo_dias = if_else(tempo_dias == 366, 0, tempo_dias)) -> comp2
 ```
 
 ```{r}
+# visualizar os dados
 comp2 %>% 
   ggplot(aes(x = estagio, y = kg_ha, fill = herbicida)) +
   geom_boxplot(position = "dodge", width = 0.5)
@@ -44,6 +53,7 @@ comp2 %>%
 
 
 ```{r}
+# visualizar os dados
 comp2 %>% 
    ggplot(aes(x = tempo_dias, y = kg_ha, color = herbicida)) +
   geom_jitter()
@@ -52,6 +62,7 @@ comp2 %>%
 
 
 ```{r}
+# usar o modelo para estimar a produtividade com e sem PRE
 model <- drm(kg_ha ~ tempo_dias, herbicida, 
              fct = W1.3(), data = comp2)
 
@@ -60,6 +71,7 @@ plot(model)
 
 
 ```{r}
+# usar o modelo para estimar a produtividade juntando com e sem PRE herbicida
 model1 <- drm(kg_ha ~ tempo_dias, 
              fct = W1.3(), data = comp2)
 
@@ -68,23 +80,30 @@ plot(model1)
 
 
 ```{r}
-anova(model, model1) # p-value = 0.000
+# comparando os dois modelos
+anova(model, model1) # p-value = 0.000, significa que você rejeita a hipotese nula (os 2 modelos nao sao iguais). Nesse caso vc tem que usar o modelo que tem PRE e sem PRE separado
+# o melhor modelo eh o model
 ```
 
 
 
 ```{r}
+# usando cores para plotar
 plot(model, col = c(1,2), pch = c(1,16),  log = "", type = "all", 
      xlim = c(0, 140), ylim = c(0, 4500))
 ```
 
 ```{r}
+# parametros do modelo
 summary(model)
+# vc vai usar esse d pois eh a produtividade do algodao controlando plantas daninhas desde o plantio
 ```
 
 
 ```{r}
-ED(model, c(10, 50, 90), interval = "delta", type = "relative")
+# Os numeros significa uma estimativa de 10, 50 e 90% de perda de produtividade de cada (pre e sem)
+# Estimate sao os dias.
+ED(model, c(2, 5, 10), interval = "delta", type = "relative")
 ```
 
 
@@ -105,41 +124,141 @@ comp2$tempo_dias0 <- comp2$tempo_dias
 comp2$tempo_dias0[comp2$tempo_dias0==0] <- 0.5
 ```
 
+```{r}
+library(scales)
+show_col(calc_pal()(5))
+```
+
+```{r warning=FALSE}
+comp2 %>% 
+  mutate(herbicida = fct_recode(herbicida, 
+                                "clomazona + diuron" = "pre",
+                                "sem herbicida" = "sem")) %>% 
+ggplot(aes(x = tempo_dias, y = kg_ha, 
+           color = herbicida, shape = herbicida)) + 
+#  coord_trans(x= "log") +
+  geom_line(data = nd %>% mutate(herbicida = fct_recode(herbicida, 
+                                "clomazona + diuron" = "pre",
+                                "sem herbicida" = "sem")), aes(x = tempo_dias, y = p, color = herbicida, shape = herbicida), 
+            size = 1.2) +
+  geom_ribbon(data = nd %>% mutate(herbicida = fct_recode(herbicida, 
+                                "clomazona + diuron" = "pre",
+                                "sem herbicida" = "sem")), 
+              mapping = aes(ymin = pmin, ymax = pmax,
+                            x = tempo_dias, y = p, fill = herbicida), color = NA, alpha = 0.1) +
+  geom_jitter(alpha = 0.1, position = position_jitter(seed = 42)) +
+  scale_x_continuous(limits = c(0, 135), breaks = seq(0, 135,15), expand = c(0.01, 0.01)) +
+  scale_y_continuous(limits = c(0, 5000), expand = c(0.01, 0.01)) +
+  labs(y = expression(paste("Produtividade (kg ha"^"-1",")")), 
+       x = "Dias após o plantio") +
+  theme_few() +
+  scale_color_calc() +
+  scale_fill_calc() +
+  scale_shape_cleveland() +
+  theme(legend.position = c(0.15, 0.12),
+        legend.background = element_blank(),
+        legend.title = element_blank()) -> fig1
+```
 
 
 ```{r}
-comp2 %>% 
-ggplot(aes(x = tempo_dias, y = kg_ha, 
-           color = herbicida)) + 
-#  coord_trans(x= "log") +
-  geom_jitter(data = comp2, aes(x = tempo_dias, y = kg_ha, color = herbicida),
-              alpha = 0.1) +
-  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 140, 20)) +
-  scale_y_continuous(limits = c(0, 4500)) +
-  geom_line(data = nd, aes(x = tempo_dias, y = p, color = herbicida), size = 1.2) +
-  labs(y = expression(paste("Produtividade (kg ha"^"-1",")")), 
-       x = "Dias após o plantio", color = NULL) +
-  theme_few() +
-  theme(legend.position = c(0.1, 0.1))
+# aqui estima o dia que teve a perda de 2%
+ED(model, 2, interval = "delta", type = "relative")
+#EDcomp(model, c(2, 2, 5, 5, 10, 10), type = "relative")
+```
+```{r}
+# aqui estimo a produtividade do dia estimado acima
+nd %>% 
+  filter(tempo_dias == 12)
+```
 
-ggsave("prod.png")
+
+```{r warning=FALSE}
+# perda de 2% de produtividade
+fig1 +
+  annotate("text", x = 0, y = 4850, label = "Perda de 2%", 
+           ontface = "bold", size = 4, color = "#333333", hjust = 0) +
+  geom_segment(x = 76.7, xend = 76.7, y = 2900, yend = 3600,
+               color = "#004586") +
+  geom_segment(x = 11.52, xend = 11.52, y = 2500, yend = 3300,
+               color = "#ff420e") +
+  annotate("text", x = 77, y = 3800, label = "77 dias", 
+           ontface = "bold", size = 3, color = "#004586") +
+  annotate("text", x = 11.52, y = 2350, label = "12 dias", 
+           ontface = "bold", size = 3, color = "#ff420e") +
+  annotate("text", x = 11.52, y = 2100, label = expression(paste("3040 kg ha"^"-1",)), 
+           ontface = "bold", size = 3, color = "#333333") +
+  annotate("text", x = 76.7, y = 4050, label = expression(paste("3077 kg ha"^"-1",)), 
+           ontface = "bold", size = 3, color = "#333333") 
+
+ggsave("pdois.png")
+```
+
+
+
+
+```{r}
+ED(model, 5, interval = "delta", type = "relative")
+```
+
+```{r}
+nd %>% 
+  filter(tempo_dias == 102)
+```
+
+
+
+```{r warning=FALSE}
+# perda de 5% de produtividade
+fig1 +
+  annotate("text", x = 0, y = 4850, label = "Perda de 5%", 
+           ontface = "bold", size = 4, color = "#333333", hjust = 0) +
+  geom_segment(x = 102.1506, xend = 102.1506, y = 2900, yend = 3600,
+               color = "#004586") +
+  geom_segment(x = 19.7977, xend = 19.7977, y = 2500, yend = 3050,
+               color = "#ff420e") +
+  annotate("text", x = 102.1506, y = 3800, label = "102 dias", 
+           ontface = "bold", size = 3, color = "#004586") +
+  annotate("text", x = 19.7977, y = 2350, label = "20 dias", 
+           ontface = "bold", size = 3, color = "#ff420e") +
+  annotate("text", x = 19.7977, y = 2100, label = expression(paste("2949 kg ha"^"-1",)), 
+           ontface = "bold", size = 3, color = "#333333") +
+  annotate("text", x = 102.1506, y = 4050, label = expression(paste("2984 kg ha"^"-1",)), 
+           ontface = "bold", size = 3, color = "#333333") 
+
+ggsave("pcinco.png")
 ```
 
 
 
 ```{r}
+ED(model, 10, interval = "delta", type = "relative")
+```
+
+```{r}
 nd %>% 
-  filter(tempo_dias == 30) %>% 
-  ggplot(aes(x = herbicida, y = p, 
-           color = herbicida)) +
-  geom_point() +
-  geom_linerange(aes(ymin = pmin, ymax = pmax)) +
-  coord_flip() +
-  labs(y = expression(paste("Produtividade (kg ha"^"-1",")")), 
-       x = "Herbicida", color = NULL) +
-  theme_few() +
-  theme(legend.position = c(0.1, 0.1),
-        legend.direction = "horizontal")
+  filter(tempo_dias == 127)
+```
+
+```{r warning=FALSE}
+# perda de 10% de produtividade
+fig1 +
+  annotate("text", x = 0, y = 4850, label = "Perda de 10%", 
+           ontface = "bold", size = 4, color = "#333333", hjust = 0) +
+  geom_segment(x = 127.4110, xend = 127.4110, y = 2700, yend = 3600,
+               color = "#004586") +
+  geom_segment(x = 30.0750, xend = 30.0750, y = 2300, yend = 2900,
+               color = "#ff420e") +
+  annotate("text", x = 127.4110, y = 3800, label = "127 dias", 
+           ontface = "bold", size = 3, color = "#004586") +
+  annotate("text", x = 30.0750, y = 2200, label = "30 dias", 
+           ontface = "bold", size = 3, color = "#ff420e") +
+  annotate("text", x = 30.0750, y = 2000, label = expression(paste("2797 kg ha"^"-1",)), 
+           ontface = "bold", size = 3, color = "#333333") +
+  annotate("text", x = 127.4110, y = 4050, label = expression(paste("2830 kg ha"^"-1",)), 
+           ontface = "bold", size = 3, color = "#333333") 
+
+ggsave("pdez.png")
 ```
 
 
