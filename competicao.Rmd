@@ -235,6 +235,8 @@ ggsave("pcinco.png")
 ED(model, 10, interval = "delta", type = "relative")
 ```
 
+
+
 ```{r}
 nd %>% 
   filter(tempo_dias == 127)

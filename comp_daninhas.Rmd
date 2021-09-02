@@ -1,0 +1,92 @@
+---
+title: "comp_daninhas"
+author: "Maxwel Coura Oliveira"
+date: "8/31/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ggalluvial)
+library(ggridges)
+```
+
+
+```{r}
+readxl::read_excel("data/avaliacoes_comp.xlsx", sheet = "completo_daninhas") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(c(6:11), names_to = "plantas", values_to = "n") %>% 
+  mutate(tempo_data = ymd(tempo_data)) %>% 
+  mutate(tempo_dias = yday(tempo_data) + 11)  %>% 
+  mutate(tempo_dias = if_else(tempo_dias == 366, 0, tempo_dias)) %>% 
+  dplyr::select(herbicida, tempo_fenol, tempo_dias, bloco, plantas, n, total_m2) -> daninhas
+```
+
+```{r}
+daninhas %>% 
+  mutate(plantas = fct_recode(plantas, 
+                              "algodāo tiguera" = "algodao_tiguera",
+                              "cipó" = "cipo",
+                              "quebra pedra" = "quebra_pedra",
+                              "capim colchão" = "colchao",
+                              "apaga fogo" = "apaga_fogo",
+                              "trapoeraba" = "trapoeraba")) %>% 
+  mutate(row = row_number()) %>%
+  pivot_wider(id_cols = c(herbicida, row), 
+              names_from = tempo_fenol, values_from = plantas, 
+              values_fill = NA_character_) %>%
+  dplyr::select(-row) -> daninhas1
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+daninhas %>% 
+  mutate(tempo_fenol = fct_relevel(tempo_fenol, levels = c("V0", "V1", "V3",
+                                                           "B1", "F1", "C1", "CP"))) %>% 
+  mutate(plantas = fct_recode(plantas, 
+                              "algodāo tiguera" = "algodao_tiguera",
+                              "cipó" = "cipo",
+                              "quebra pedra" = "quebra_pedra",
+                              "capim colchão" = "colchao",
+                              "apaga fogo" = "apaga_fogo",
+                              "trapoeraba" = "trapoeraba")) -> daninhas1
+```
+
+
+```{r}
+ggplot(data = daninhas1,
+       aes(axis1 = herbicida, axis2 = tempo_fenol,
+           y = n)) +
+  scale_x_discrete(limits = c("Herbicida", "Tempo fenológico"), expand = c(.2, .05)) +
+  scale_y_continuous(limits = c(0, 270), breaks = seq(0, 250, 50)) +
+  geom_alluvium(aes(fill = plantas)) +
+  geom_stratum() +
+  scale_fill_calc(name = NULL) +
+  labs(x = NULL, y = NULL) +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_minimal()
+
+ggsave("daninhas.png", bg = "white")
+```
+
+
+
+```{r}
+daninhas1 %>% 
+  ggplot(aes(x = n, y = plantas)) +
+  geom_density_ridges(scale = 4)
+```
+
