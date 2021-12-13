@@ -8,7 +8,7 @@ output: html_document
 
 
 ```{r}
-#install.packages("tidyverse")
+#install.packages("glmmTMB")
 ```
 
 
@@ -22,7 +22,6 @@ library(multcomp)
 ```
 
 # Controle
-
 
 ```{r}
 pre <- read_csv("data/pre_emergente.csv")
@@ -45,36 +44,31 @@ pre %>%
 
 ```{r}
 pre1 %>% 
-  filter(data_4 == "2021-02-09") -> pre_21
+  filter(data_4 == "2021-01-12") -> pre_21
 ```
 
 
 ```{r}
-modelo_pre <- glmmTMB(controle ~ herbicidas + (1|repeticao),
+modelo_pre21 <- glmmTMB(controle ~ herbicidas + (1|repeticao),
                       family = beta_family(),
                       data = pre_21)
 ```
 
 
 ```{r}
-car::Anova(modelo_pre)
+glmmTMB:::Anova.glmmTMB(modelo_pre21)
 ```
 
+
+
 ```{r}
-emmeans(modelo_pre, ~ herbicidas, type = "response") -> pre_em_21
+emmeans(modelo_pre21, ~ herbicidas, type = "response") -> pre_em_21
 ```
 
 
 ```{r}
 cld(pre_em_21, alpha=0.05, Letters=letters, adjust="none", reversed = TRUE)
 ```
-                              Controle                       Biomassa (g)    Densidade (m2)
-                     14 dias            28 DAT       50          50 DAT
-herbicida      controle    IC      controle   IC   controle   IC
-Clomazone         67 a  (54-69)       55 b    
-S-Metolachlor     55 b
-Pedimentalina
-
 
 
 

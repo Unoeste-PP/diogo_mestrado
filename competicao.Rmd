@@ -5,6 +5,8 @@ date: "5/26/2021"
 output: html_document
 ---
 
+
+
 ```{r}
 # tire o # e clique na seta verde para instalar os pacotes
 #install.packages("tidyverse")
@@ -23,10 +25,14 @@ library(ggthemes)
 ```
 
 
+
 ```{r}
 # importar os dados de produtividade
 comp <- read_csv("data/produtividade.csv")
 ```
+
+
+
 
 ```{r}
 # manipular os dados
@@ -43,6 +49,8 @@ comp1 %>%
   mutate(tempo_dias = yday(tempo_data) + 11)  %>% 
   mutate(tempo_dias = if_else(tempo_dias == 366, 0, tempo_dias)) -> comp2
 ```
+
+
 
 ```{r}
 # visualizar os dados
@@ -84,7 +92,6 @@ plot(model1)
 anova(model, model1) # p-value = 0.000, significa que você rejeita a hipotese nula (os 2 modelos nao sao iguais). Nesse caso vc tem que usar o modelo que tem PRE e sem PRE separado
 # o melhor modelo eh o model
 ```
-
 
 
 ```{r}
@@ -137,7 +144,8 @@ comp2 %>%
 ggplot(aes(x = tempo_dias, y = kg_ha, 
            color = herbicida, shape = herbicida)) + 
 #  coord_trans(x= "log") +
-  geom_line(data = nd %>% mutate(herbicida = fct_recode(herbicida, 
+  geom_line(data = nd %>% 
+              mutate(herbicida = fct_recode(herbicida, 
                                 "clomazona + diuron" = "pre",
                                 "sem herbicida" = "sem")), aes(x = tempo_dias, y = p, color = herbicida, shape = herbicida), 
             size = 1.2) +
@@ -166,10 +174,12 @@ ggplot(aes(x = tempo_dias, y = kg_ha,
 ED(model, 2, interval = "delta", type = "relative")
 #EDcomp(model, c(2, 2, 5, 5, 10, 10), type = "relative")
 ```
+
+
 ```{r}
 # aqui estimo a produtividade do dia estimado acima
 nd %>% 
-  filter(tempo_dias == 12)
+  filter(tempo_dias == 77)
 ```
 
 
@@ -222,7 +232,7 @@ fig1 +
   annotate("text", x = 19.7977, y = 2350, label = "20 dias", 
            ontface = "bold", size = 3, color = "#ff420e") +
   annotate("text", x = 19.7977, y = 2100, label = expression(paste("2949 kg ha"^"-1",)), 
-           ontface = "bold", size = 3, color = "#333333") +
+           fontface = "bold", size = 3, color = "#333333") +
   annotate("text", x = 102.1506, y = 4050, label = expression(paste("2984 kg ha"^"-1",)), 
            ontface = "bold", size = 3, color = "#333333") 
 

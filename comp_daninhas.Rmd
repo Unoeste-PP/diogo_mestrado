@@ -7,10 +7,14 @@ output: html_document
 
 ```{r}
 library(tidyverse)
+#install.packages("ggalluvial")
 library(ggalluvial)
+#install.packages("ggridges")
 library(ggridges)
+#install.packages("readxl")
 ```
 
+tbl
 
 ```{r}
 readxl::read_excel("data/avaliacoes_comp.xlsx", sheet = "completo_daninhas") %>% 
@@ -21,31 +25,6 @@ readxl::read_excel("data/avaliacoes_comp.xlsx", sheet = "completo_daninhas") %>%
   mutate(tempo_dias = if_else(tempo_dias == 366, 0, tempo_dias)) %>% 
   dplyr::select(herbicida, tempo_fenol, tempo_dias, bloco, plantas, n, total_m2) -> daninhas
 ```
-
-```{r}
-daninhas %>% 
-  mutate(plantas = fct_recode(plantas, 
-                              "algodāo tiguera" = "algodao_tiguera",
-                              "cipó" = "cipo",
-                              "quebra pedra" = "quebra_pedra",
-                              "capim colchão" = "colchao",
-                              "apaga fogo" = "apaga_fogo",
-                              "trapoeraba" = "trapoeraba")) %>% 
-  mutate(row = row_number()) %>%
-  pivot_wider(id_cols = c(herbicida, row), 
-              names_from = tempo_fenol, values_from = plantas, 
-              values_fill = NA_character_) %>%
-  dplyr::select(-row) -> daninhas1
-```
-
-
-
-
-
-
-
-
-
 
 
 
