@@ -24,7 +24,7 @@ library(multcomp)
 # Controle
 
 ```{r}
-pre <- read_csv("data/pre_emergente.csv")
+biomassa_pre <- read_csv("data/biomassa.csv")
 ```
 
 

@@ -5,26 +5,33 @@ date: "10/1/2021"
 output: html_document
 ---
  
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
+```{r}
+library(tidyverse)
+library(glmmTMB)
+library(emmeans)
+library(lubridate)
+library(ggthemes)
+library(multcomp)
 ```
 
-## R Markdown 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# Controle
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+pre <- read_csv("data/pre_emergente.csv")
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+pre %>% 
+  janitor::clean_names() %>% 
+  mutate(herbicidas = str_to_title(herbicidas)) %>% 
+  dplyr::select(herbicidas, repeticao, plot_3, data_4, nota) %>% 
+  filter(nota != "x") %>% 
+  mutate(nota = as.double(nota)) %>% 
+  mutate(data_4 = dmy(data_4)) %>% 
+  mutate(controle = if_else(nota == 100, 99, nota)) %>% 
+  mutate(controle = controle / 100) %>% 
+  mutate_if(is_character, as_factor) -> pre1
 ```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
