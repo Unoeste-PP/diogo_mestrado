@@ -22,7 +22,7 @@ library(multcomp)
 ```
 
 # Controle
-
+ 
 ```{r}
 biomassa_pre <- read_csv("data/biomassa.csv")
 ```
