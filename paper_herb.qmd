@@ -1,0 +1,89 @@
+---
+title: "paper_herb"
+format: html
+editor: visual
+---
+
+
+```{r}
+library(tidyverse)
+library(glmmTMB)
+library(emmeans)
+library(lubridate)
+library(ggthemes)
+library(lme4)
+library(lmerTest)
+library(multcomp)
+```
+
+
+# Experimento de controle de planta daninha no algodao
+
+```{r}
+pre <- read_csv("data/pre_emergente.csv")
+```
+
+# Limpando os dados
+
+```{r}
+pre %>% 
+  janitor::clean_names() %>% 
+  mutate(herbicidas = str_to_title(herbicidas)) %>% 
+  dplyr::select(herbicidas, repeticao, plot_3, biomassa, total_m2) %>% 
+  filter(!is.na(total_m2)) |> 
+  mutate(biomassa = str_replace(biomassa, ",", ".")) |> 
+  mutate(biomassa = as.double(biomassa)) %>% 
+  mutate_if(is_character, as_factor) -> pre_biomassa
+```
+
+# Biomassa
+
+```{r}
+modelo_biomassa <- lmer(biomassa ~ herbicidas + (1|repeticao),
+                      data = pre_biomassa)
+```
+
+
+```{r}
+anova(modelo_biomassa)
+```
+
+
+
+```{r}
+emmeans(modelo_biomassa, ~ herbicidas) -> pre_em_bio
+```
+
+# Resultados
+
+```{r}
+# Resultados com as letras
+cld(pre_em_bio, alpha=0.05, Letters=letters, adjust="none", reversed = TRUE)
+```
+
+
+# Densidade de plantas daninhas
+
+```{r}
+modelo_densidade <- glmmTMB(total_m2 ~ herbicidas + (1|repeticao),
+                      family = poisson,
+                      data = pre_biomassa)
+```
+
+
+```{r}
+glmmTMB:::Anova.glmmTMB(modelo_densidade)
+```
+
+
+
+```{r}
+emmeans(modelo_densidade, ~ herbicidas, type = "response") -> pre_em_den
+```
+
+# Resultados
+
+```{r}
+# Resultados com as letras
+cld(pre_em_den, alpha=0.05, Letters=letters, adjust="none", reversed = TRUE)
+```

@@ -1,0 +1,54 @@
+---
+title: "paper_pre-yield"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(glmmTMB)
+library(emmeans)
+library(lubridate)
+library(ggthemes)
+library(lme4)
+library(lmerTest)
+library(multcomp)
+```
+
+
+```{r}
+produtividade <- read_csv("data/pre_yield.csv")
+```
+
+```{r}
+produtividade |> 
+  janitor::clean_names() %>% 
+  dplyr::select(herbicida, rep, parcela, kg_ha) |> 
+  mutate_if(is_character, as_factor) |> 
+  mutate(herbicida = str_to_lower(herbicida)) -> prod
+```
+
+# Produtividade
+
+```{r}
+modelo_yield <- lmer(kg_ha ~ herbicida + (1|rep),
+                      data = prod)
+```
+
+
+```{r}
+anova(modelo_yield) 
+```
+
+
+
+```{r}
+emmeans(modelo_yield, ~ herbicida) -> pre_em_yield
+```
+
+# Resultados
+
+```{r}
+# Resultados com as letras
+cld(pre_em_yield, alpha=0.05, Letters=letters, adjust="none", reversed = TRUE)
+```

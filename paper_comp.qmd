@@ -1,0 +1,181 @@
+---
+title: "paper_competicao"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(drc)
+library(lubridate)
+library(ggthemes)
+library(ggtext)
+```
+
+
+```{r}
+comp <- read_csv("data/produtividade.csv")
+```
+
+```{r}
+# manipular os dados
+comp %>% 
+  janitor::clean_names() %>% 
+  mutate(kg_ha = kg_ha / 100) %>% 
+  mutate_at(c("herbicida", "estagio"), as_factor) %>%
+  mutate(tempo_data = dmy(tempo_data)) -> comp1
+```
+
+```{r}
+# manipular os dados
+comp1 %>% 
+  mutate(tempo_dias = yday(tempo_data) + 11)  %>% 
+  mutate(tempo_dias = if_else(tempo_dias == 366, 0, tempo_dias)) -> comp2
+```
+
+
+
+```{r}
+# visualizar os dados
+comp2 %>% 
+  ggplot(aes(x = estagio, y = kg_ha, fill = herbicida)) +
+  geom_boxplot(position = "dodge", width = 0.5)
+```
+
+
+```{r}
+# visualizar os dados
+comp2 %>% 
+   ggplot(aes(x = tempo_dias, y = kg_ha, color = herbicida)) +
+  geom_jitter()
+```
+
+
+```{r}
+# usar o modelo para estimar a produtividade com e sem PRE
+model <- drm(kg_ha ~ tempo_dias, herbicida, 
+             fct = W1.3(), data = comp2)
+
+plot(model)
+```
+
+
+```{r}
+# usar o modelo para estimar a produtividade juntando com e sem PRE herbicida
+model1 <- drm(kg_ha ~ tempo_dias, 
+             fct = W1.3(), data = comp2)
+
+plot(model1)
+```
+
+
+```{r}
+# comparando os dois modelos
+anova(model, model1) # p-value = 0.000, significa que você rejeita a hipotese nula (os 2 modelos nao sao iguais). Nesse caso vc tem que usar o modelo que tem PRE e sem PRE separado
+# o melhor modelo eh o model
+```
+
+
+```{r}
+# usando cores para plotar
+plot(model, col = c(1,2), pch = c(1,16),  log = "", type = "all", 
+     xlim = c(0, 140), ylim = c(0, 4500))
+```
+
+```{r}
+# parametros do modelo
+summary(model)
+# vc vai usar esse d pois eh a produtividade do algodao controlando plantas daninhas desde o plantio
+```
+
+
+```{r}
+# Os numeros significa uma estimativa de 10, 50 e 90% de perda de produtividade de cada (pre e sem)
+# Estimate sao os dias.
+ED(model, c(2, 5, 10), interval = "delta", type = "relative") 
+```
+
+
+```{r control-prediction, include=FALSE}
+newdata <- expand.grid(tempo_dias = seq(0, 135, by = 1))
+newdata1 <- data.frame(herbicida = "pre", newdata)
+newdata2 <- data.frame(herbicida = "sem", newdata)
+
+nd = rbind(newdata1, newdata2)
+
+pm <- predict(model, newdata=nd, interval="confidence")
+
+nd$p <- pm[,1] 
+nd$pmin <- pm[,2] 
+nd$pmax <- pm[,3] 
+comp2$tempo_dias0 <- comp2$tempo_dias
+comp2$tempo_dias0[comp2$tempo_dias0==0] <- 0.5
+```
+
+```{r}
+library(scales)
+show_col(calc_pal()(5))
+```
+
+
+
+
+```{r warning=FALSE}
+comp2 %>% 
+  mutate(herbicida = fct_recode(herbicida, 
+                                "clomazone + diuron" = "pre",
+                                "no herbicide" = "sem")) %>% 
+  ggplot(aes(x = tempo_dias, 
+             y = kg_ha, 
+           color = herbicida, 
+           shape = herbicida)) + 
+#  coord_trans(x= "log") +
+  geom_line(data = nd %>% 
+              mutate(herbicida = fct_recode(herbicida, 
+                                "clomazone + diuron" = "pre",
+                                "no herbicide" = "sem")), 
+            aes(x = tempo_dias, 
+                y = p, 
+                color = herbicida), 
+            size = 1.2) +
+  geom_ribbon(data = nd %>% 
+                mutate(herbicida = fct_recode(herbicida, 
+                                "clomazone + diuron" = "pre",
+                                "no herbicide" = "sem")), 
+              mapping = aes(ymin = pmin, 
+                            ymax = pmax,
+                            x = tempo_dias, 
+                            y = p, 
+                            fill = herbicida), 
+              color = NA, 
+              alpha = 0.1) +
+  geom_jitter(alpha = 0.2, 
+              size = 3,
+              position = position_jitter(seed = 42)) +
+  scale_x_continuous(limits = c(0, 135), 
+                     breaks = seq(0, 135,15), 
+                     expand = c(0.01, 0.01)) +
+  scale_y_continuous(limits = c(0, 4500), 
+                     expand = c(0.01, 0.01)) +
+  labs(y = expression(paste("Cotton yield (kg ha"^"-1",")")), 
+       x = "Days after planting") +
+  theme_few() +
+  scale_color_manual(values = c("#333333", "#ed1b2f")) +
+  scale_fill_manual(values = c("#333333", "#ed1b2f")) +
+  scale_shape_cleveland() +
+  theme(legend.position = c(0.22, 0.08),
+        axis.text = element_markdown(size = 12),
+        legend.title = element_blank(),
+        legend.text = element_markdown(size = 13),
+        axis.title.y = element_text(face="bold", size = 16),
+        axis.title.x = element_markdown(size = 16),
+        legend.background = element_blank()) 
+```
+
+
+```{r}
+ggsave("figure.png", height = 6, width = 6)
+```
+
+
+
