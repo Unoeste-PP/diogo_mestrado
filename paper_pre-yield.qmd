@@ -43,7 +43,7 @@ anova(modelo_yield)
 
 
 ```{r}
-emmeans(modelo_yield, ~ herbicida) -> pre_em_yield
+emmeans(modelo_yield, ~ herbicida) -> pre_em_yield 
 ```
 
 # Resultados
