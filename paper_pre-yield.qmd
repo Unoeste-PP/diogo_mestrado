@@ -40,7 +40,7 @@ modelo_yield <- lmer(kg_ha ~ herbicida + (1|rep),
 anova(modelo_yield) 
 ```
 
-
+ 
 
 ```{r}
 emmeans(modelo_yield, ~ herbicida) -> pre_em_yield 
