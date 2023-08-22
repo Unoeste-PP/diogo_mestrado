@@ -62,7 +62,7 @@ cld(pre_em_bio, alpha=0.05, Letters=letters, adjust="none", reversed = TRUE)
 ```
 
 
-# Densidade de plantas daninhas
+# Densidade de plantas daninhas 
 
 ```{r}
 modelo_densidade <- glmmTMB(total_m2 ~ herbicidas + (1|repeticao),
